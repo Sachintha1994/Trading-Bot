@@ -323,18 +323,23 @@ def create_equity_chart(trades: list[dict]):
     return fig
 
 
-def update_config_trading_pair(new_pair: str):
+def update_config_settings(new_pair: str, new_interval: str):
     config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.py")
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             content = f.read()
         
         import re
-        pattern = r'(TRADING_PAIR\s*=\s*["\'])[A-Z0-9]+(["\'])'
-        new_content = re.sub(pattern, r'\g<1>' + new_pair + r'\g<2>', content)
+        # Update TRADING_PAIR
+        pattern_pair = r'(TRADING_PAIR\s*=\s*["\'])[A-Z0-9]+(["\'])'
+        content = re.sub(pattern_pair, r'\g<1>' + new_pair + r'\g<2>', content)
+        
+        # Update TIMEFRAME
+        pattern_interval = r'(TIMEFRAME\s*=\s*["\'])\w+(["\'])'
+        content = re.sub(pattern_interval, r'\g<1>' + new_interval + r'\g<2>', content)
         
         with open(config_path, "w", encoding="utf-8") as f:
-            f.write(new_content)
+            f.write(content)
         return True
     except Exception as e:
         st.error(f"Failed to update config.py: {e}")
@@ -364,17 +369,30 @@ with st.sidebar:
     else:
         symbol = selected_pair
 
+    # Interactive Timeframe Selector
+    st.markdown("### ⏱️ Timeframe")
+    popular_intervals = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d"]
+    
+    default_interval_index = 0
+    if config.TIMEFRAME in popular_intervals:
+        default_interval_index = popular_intervals.index(config.TIMEFRAME)
+        
+    interval = st.selectbox("Select Timeframe", popular_intervals, index=default_interval_index)
+
     # Save to config.py if desired
-    if symbol != config.TRADING_PAIR:
-        st.warning(f"Viewing: **{symbol}**\nBot default: **{config.TRADING_PAIR}**")
+    settings_changed = (symbol != config.TRADING_PAIR) or (interval != config.TIMEFRAME)
+    if settings_changed:
+        st.warning(
+            f"Viewing: **{symbol}** ({interval})\n"
+            f"Bot default: **{config.TRADING_PAIR}** ({config.TIMEFRAME})"
+        )
         if st.button("💾 Set as Bot Default (updates config.py)"):
-            if update_config_trading_pair(symbol):
-                st.success(f"Updated config.py to {symbol}!")
+            if update_config_settings(symbol, interval):
+                st.success(f"Updated config.py to {symbol} ({interval})!")
                 st.rerun()
     else:
-        st.success(f"Active Pair: **{symbol}** (Bot Default)")
+        st.success(f"Active: **{symbol}** | **{interval}** (Bot Default)")
 
-    interval = config.TIMEFRAME
     candles = st.slider("Candles to display", 50, 500, config.KLINE_LIMIT)
 
     st.markdown("---")
