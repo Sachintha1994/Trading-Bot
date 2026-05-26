@@ -35,9 +35,17 @@ LIVE_BASE_URL = "https://api.binance.com"
 # ──────────────────────────────────────────────
 # MARKET SETTINGS
 # ──────────────────────────────────────────────
-TRADING_PAIR = "BNBUSDT"
-BASE_ASSET = "BNB"       # The asset you're buying/selling
-QUOTE_ASSET = "USDT"     # The asset you're paying with
+TRADING_PAIR = "ETHUSDT"  # Change this to any coin pair you want to trade (e.g., "ETHUSDT", "BTCUSDT")
+
+# Automatically parse BASE_ASSET and QUOTE_ASSET from TRADING_PAIR
+def _parse_pair(pair):
+    common_quotes = ["USDT", "USDC", "BUSD", "TUSD", "FDUSD", "BTC", "ETH", "BNB"]
+    for quote in common_quotes:
+        if pair.endswith(quote) and len(pair) > len(quote):
+            return pair[:-len(quote)], quote
+    return pair[:-4], pair[-4:]
+
+BASE_ASSET, QUOTE_ASSET = _parse_pair(TRADING_PAIR)
 TIMEFRAME = "1h"         # Candle interval: 1m, 5m, 15m, 1h, 4h, 1d
 KLINE_LIMIT = 100        # Number of candles to fetch for analysis
 

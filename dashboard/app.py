@@ -323,17 +323,58 @@ def create_equity_chart(trades: list[dict]):
     return fig
 
 
+def update_config_trading_pair(new_pair: str):
+    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.py")
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        
+        import re
+        pattern = r'(TRADING_PAIR\s*=\s*["\'])[A-Z0-9]+(["\'])'
+        new_content = re.sub(pattern, r'\g<1>' + new_pair + r'\g<2>', content)
+        
+        with open(config_path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+        return True
+    except Exception as e:
+        st.error(f"Failed to update config.py: {e}")
+        return False
+
+
 # ──────────────────────────────────────────────
 # SIDEBAR
 # ──────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## ⚙️ Settings")
 
-    symbol = config.TRADING_PAIR
+    # Interactive Coin Pair Selector
+    st.markdown("### 💱 Active Pair")
+    popular_pairs = ["BNBUSDT", "BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT", "XRPUSDT", "Custom"]
+    
+    default_index = 0
+    if config.TRADING_PAIR in popular_pairs:
+        default_index = popular_pairs.index(config.TRADING_PAIR)
+    else:
+        default_index = popular_pairs.index("Custom")
+        
+    selected_pair = st.selectbox("Select Coin Pair", popular_pairs, index=default_index)
+    
+    if selected_pair == "Custom":
+        symbol = st.text_input("Enter Custom Pair", value=config.TRADING_PAIR).upper().strip()
+    else:
+        symbol = selected_pair
+
+    # Save to config.py if desired
+    if symbol != config.TRADING_PAIR:
+        st.warning(f"Viewing: **{symbol}**\nBot default: **{config.TRADING_PAIR}**")
+        if st.button("💾 Set as Bot Default (updates config.py)"):
+            if update_config_trading_pair(symbol):
+                st.success(f"Updated config.py to {symbol}!")
+                st.rerun()
+    else:
+        st.success(f"Active Pair: **{symbol}** (Bot Default)")
+
     interval = config.TIMEFRAME
-    
-    st.info(f"📈 Monitoring **{symbol}** on **{interval}**")
-    
     candles = st.slider("Candles to display", 50, 500, config.KLINE_LIMIT)
 
     st.markdown("---")
